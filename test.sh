@@ -10,28 +10,38 @@ total_score=0
 log_file="workflow_logs.txt"
 report_file="yes.txt"
 
+# Check if the log file exists
+echo "Checking if workflow_logs.txt exists..."
+if [ ! -f "$log_file" ]; then
+    echo "Log file $log_file not found!"
+    exit 1
+fi
+
 # Step 1: Check Build Success (30%)
 echo "Checking Build Success..."
 if grep -q "Successfully built" "$log_file"; then
     build_success=30
+    echo "Build Success: 30%"
 else
-    build_success=0
+    echo "Build Success: 0%"
 fi
 
 # Step 2: Check Artifact Creation and Upload (40%)
 echo "Checking Artifact Creation and Upload..."
 if grep -q "Upload Artifact" "$log_file" && grep -q "artifact uploaded" "$log_file"; then
     artifact_creation=40
+    echo "Artifact Creation and Upload: 40%"
 else
-    artifact_creation=0
+    echo "Artifact Creation and Upload: 0%"
 fi
 
 # Step 3: Check Deployment Success (30%)
 echo "Checking Deployment Success..."
 if grep -q "Running container with image" "$log_file"; then
     deployment_success=30
+    echo "Deployment Success: 30%"
 else
-    deployment_success=0
+    echo "Deployment Success: 0%"
 fi
 
 # Calculate Total Score
