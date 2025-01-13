@@ -50,7 +50,7 @@ jobs:
     runs-on: self-hosted
     needs: Build
     env:
-      username: dapper01
+      username: monyslim
       image_name: test-image
     steps:
       # Step 1: Download Docker Image Artifact
@@ -99,11 +99,11 @@ jobs:
             echo "No container found using port 8082"
           fi
 
-      # # Step 7: Run Docker Containers
-      # - name: Run Docker Containers
-      #   run: |
-      #     echo "Running container with image: $username/$image_name:${{ needs.Build.outputs.app_version }}"
-      #     docker run -d -p 8082:3000 $username/$image_name:${{ needs.Build.outputs.app_version }}
+      # Step 7: Run Docker Containers
+      - name: Run Docker Containers
+        run: |
+          echo "Running container with image: $username/$image_name:${{ needs.Build.outputs.app_version }}"
+          docker run -d -p 8082:3000 $username/$image_name:${{ needs.Build.outputs.app_version }}
 
       # # Step 8: Send Email Notification
       # - name: Send email notification
