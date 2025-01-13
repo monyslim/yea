@@ -105,7 +105,7 @@ jobs:
           echo "Running container with image: $username/$image_name:${{ needs.Build.outputs.app_version }}"
           docker run -d -p 8082:3000 $username/$image_name:${{ needs.Build.outputs.app_version }}
 
-      # # Step 8: Send Email Notification
+      # Step 8: Send Email Notification
       # - name: Send email notification
       #   uses: dawidd6/action-send-mail@v3
       #   with:
