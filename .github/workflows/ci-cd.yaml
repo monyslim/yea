@@ -88,19 +88,22 @@ jobs:
   
             # Read Logs
             log_file="workflow_logs.txt"
-            report_file="yes.txt"
+            report_file="student_workflow_report.txt"
   
             echo "Evaluating Metrics..."
             
-            if grep -q "Successfully built" "$log_file"; then
+            # Debug: Show logs
+            cat "$log_file"
+  
+            if grep -i "successfully built" "$log_file"; then
                 build_success=30
             fi
   
-            if grep -q "Upload Artifact" "$log_file" && grep -q "artifact uploaded" "$log_file"; then
+            if grep -i "artifact uploaded" "$log_file"; then
                 artifact_creation=40
             fi
   
-            if grep -q "docker run" "$log_file"; then
+            if grep -i "docker run" "$log_file"; then
                 deployment_success=30
             fi
   
@@ -115,10 +118,3 @@ jobs:
             echo "" >> "$report_file"
             echo "Total Score (%): $total_score" >> "$report_file"
             echo "Report generated successfully at $report_file."
-     
-      - name: Upload Metrics Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: student-workflow-metrics-report
-          path: yes.txt
-  
