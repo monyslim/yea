@@ -106,7 +106,7 @@ jobs:
                   artifact_created=20
               fi
     
-              # Check for successful artifact upload
+              # Check for successful artifact uploaded
               if grep -q "Artifact docker-image has been successfully uploaded!" "$log_file"; then
                   echo "Artifact upload detected" >> "$log_file"
                   artifact_uploaded=20
