@@ -3,44 +3,45 @@ name: CI
 on:
   push:
     branches:
-      - master  # When a push is made to the master branch, run this workflow
-  workflow_dispatch:  # Allows manual triggering from the GitHub Actions UI
+      - master
 
 jobs:
   Build:
-    name: instance-build
+    name: Build and Save Docker Image
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the Repository
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      # Step 2: Generate Version Number
       - name: Generate Version Number
         id: version
         run: |
           TIMESTAMP=$(date +'%Y%m%d%H%M%S')
           VERSION="v${TIMESTAMP}_${RANDOM}"
-          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV  # Set environment variable
-          echo "app_version=$VERSION" >> $GITHUB_OUTPUT  # Set job output
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
 
-      # Step 3: Build the Docker Image
-      - name: Build the Docker Image
+      - name: Build Docker Image
+        id: build
         env:
           image_name: test-image
           username: monyslim
-          APP_VERSION: ${{ steps.version.outputs.app_version }}
         run: |
-          docker build -t $username/$image_name:${{ env.APP_VERSION }} .
+          docker build -t $username/$image_name:${{ env.APP_VERSION }} . 2>&1 | tee -a workflow_logs.txt
           docker save -o test-image_${{ env.APP_VERSION }}.tar $username/$image_name:${{ env.APP_VERSION }}
 
-      # Step 4: Upload Docker Image as Artifact
-      - name: Upload Docker Image as Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v3
         with:
           name: docker-image
           path: test-image_${{ env.APP_VERSION }}.tar
+
+      - name: Upload Logs for Debugging
+        uses: actions/upload-artifact@v3
+        with:
+          name: workflow-logs
+          path: workflow_logs.txt
 
     outputs:
       app_version: ${{ steps.version.outputs.app_version }}
@@ -49,97 +50,76 @@ jobs:
     name: Deploy Docker Image
     runs-on: self-hosted
     needs: Build
-    env:
-      username: monyslim
-      image_name: test-image
+
     steps:
-      # Step 1: Download Docker Image Artifact
       - name: Download Docker Image Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: docker-image
           path: .
 
-      # Step 2: Verify Artifact Download
-      - name: Verify Artifact Download
-        run: |
-          ls -al
-          if [ -f "test-image_${{ needs.Build.outputs.app_version }}.tar" ]; then
-            echo "Artifact found"
-          else
-            echo "Artifact not found"
-            exit 1
-          fi
-
-      # Step 3: Load Docker Image
       - name: Load Docker Image
         run: |
-          docker load -i test-image_${{ needs.Build.outputs.app_version }}.tar
+          docker load -i test-image_${{ needs.Build.outputs.app_version }}.tar | tee -a workflow_logs.txt
 
-      # Step 4: Verify Loaded Docker Image
-      - name: Verify Loaded Docker Image
+      - name: Run Docker Container
         run: |
-          docker images
+          docker run -d -p 8082:3000 monyslim/test-image:${{ needs.Build.outputs.app_version }} | tee -a workflow_logs.txt
 
-      # Step 5: Print Image Detail
-      - name: Print Image Detail
-        run: |
-          echo "username: $username"
-          echo "image_name: $image_name"
-          echo "app_version: ${{ needs.Build.outputs.app_version }}"
-
-      # Step 6: Stop Containers Using Port 8082 (if any)
-      - name: Stop Containers Using Port 8082 (if any)
-        run: |
-          CONTAINER_ID=$(docker ps --filter "publish=8082" -q)
-          if [ -n "$CONTAINER_ID" ]; then
-            echo "Stopping container $CONTAINER_ID"
-            docker stop $CONTAINER_ID
-          else
-            echo "No container found using port 8082"
-          fi
-
-      # Step 7: Run Docker Containers
-      - name: Run Docker Containers
-        run: |
-          echo "Running container with image: $username/$image_name:${{ needs.Build.outputs.app_version }}"
-          docker run -d -p 8082:3000 $username/$image_name:${{ needs.Build.outputs.app_version }}
-
-      # Step 8: Send Email Notification
-      # - name: Send email notification
-      #   uses: dawidd6/action-send-mail@v3
-      #   with:
-      #     server_address: smtp.gmail.com
-      #     server_port: 465
-      #     secure: true
-      #     username: prcenturionboy@gmail.com
-      #     password: ${{ secrets.EMAIL_PASSWORD }}
-      #     subject: "Docker Image Deployed from Artifact"
-      #     to: "monyslim@outlook.com"
-      #     from: "Mr David Agba DevOps"
-      #     body: |
-      #       Hello,
-      #       The latest version of the Docker image (version: ${{ needs.Build.outputs.app_version }}) has been deployed from the artifact.
-
-  RunMetrics:
-    name: Run Metrics Script and Generate Report
+  GenerateReport:
+    name: Generate Metrics Report
     runs-on: ubuntu-latest
-    needs: Deploy
+    needs: [Build, Deploy]
 
     steps:
-      # Step 1: Checkout the repository (to get access to bash_metrics.sh)
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Download Logs
+        uses: actions/download-artifact@v3
+        with:
+          name: workflow-logs
+          path: .
 
-      # Step 2: Run the Metrics Script
-      - name: Run Metrics Script
+      - name: Evaluate Metrics and Generate Report
         run: |
-          chmod +x test.sh
-          ./test.sh  # Run the metrics script to generate the report
+          # Initialize Metrics
+          build_success=0
+          artifact_creation=0
+          deployment_success=0
+          total_score=0
 
-      # Step 3: Upload Metrics Report as Artifact
+          # Read Logs
+          log_file="workflow_logs.txt"
+          report_file="student_workflow_report.txt"
+
+          echo "Evaluating Metrics..."
+          
+          if grep -q "Successfully built" "$log_file"; then
+              build_success=30
+          fi
+
+          if grep -q "Upload Artifact" "$log_file" && grep -q "artifact uploaded" "$log_file"; then
+              artifact_creation=40
+          fi
+
+          if grep -q "docker run" "$log_file"; then
+              deployment_success=30
+          fi
+
+          total_score=$((build_success + artifact_creation + deployment_success))
+
+          # Generate Report
+          cat <<EOF > "$report_file"
+CI/CD Workflow Evaluation Report
+================================
+Build Success (%): $build_success
+Artifact Creation and Upload (%): $artifact_creation
+Deployment Success (%): $deployment_success
+
+Total Score (%): $total_score
+EOF
+          echo "Report generated successfully at $report_file."
+
       - name: Upload Metrics Report
         uses: actions/upload-artifact@v3
         with:
           name: student-workflow-metrics-report
-          path: yes.txt  # Path to the report generated by the metrics script
+          path: student_workflow_report.txt
