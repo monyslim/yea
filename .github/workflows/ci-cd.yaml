@@ -139,3 +139,11 @@ jobs:
             echo "Total Score (%): $total_score" >> "$report_file"
             echo "Report generated successfully at $report_file."
   
+  
+  
+  
+      - name: Upload Metrics Report
+        uses: actions/upload-artifact@v3
+        with:
+              name: student-workflow-metrics-report
+              path: yes.txt
