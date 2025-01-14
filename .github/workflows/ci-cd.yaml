@@ -90,38 +90,49 @@ jobs:
   
             # Log file and report file
             log_file="workflow_logs.txt"
-            report_file="yes.txt"
+            report_file="student_workflow_report.txt"
   
             echo "Evaluating Metrics..."
+            echo "Contents of $log_file:" && cat "$log_file"
   
             # Check for successful image build
             if grep -q "#10 DONE" "$log_file"; then
-                echo "Build success detected." >> "$log_file"
+                echo "Build success detected."
                 build_success=20
+            else
+                echo "Build success not detected."
             fi
   
             # Check for artifact creation
             if grep -q "Container for artifact \"docker-image\" successfully created" "$log_file"; then
-                echo "Artifact creation detected." >> "$log_file"
+                echo "Artifact creation detected."
                 artifact_created=20
+            else
+                echo "Artifact creation not detected."
             fi
   
             # Check for artifact upload
             if grep -q "Artifact docker-image has been successfully uploaded!" "$log_file"; then
-                echo "Artifact upload detected." >> "$log_file"
+                echo "Artifact upload detected."
                 artifact_uploaded=20
+            else
+                echo "Artifact upload not detected."
             fi
   
             # Check for image loaded
             if grep -q "Loaded image: monyslim/test-image" "$log_file"; then
-                echo "Image loading detected." >> "$log_file"
+                echo "Image loading detected."
                 image_loaded=20
+            else
+                echo "Image loading not detected."
             fi
   
             # Check for container running
             if grep -q "docker run" "$log_file"; then
-                echo "Container running detected." >> "$log_file"
+                echo "Container running detected."
                 container_running=20
+            else
+                echo "Container running not detected."
             fi
   
             # Calculate total score
@@ -139,8 +150,9 @@ jobs:
             echo "Total Score (%): $total_score" >> "$report_file"
             echo "Report generated successfully at $report_file."
   
+  
       - name: Upload Metrics Report
         uses: actions/upload-artifact@v3
         with:
-              name: student-workflow-metrics-report
-              path: yes.txt
+            name: student-workflow-metrics-report
+            path: yes.txt
