@@ -80,46 +80,39 @@ jobs:
 
       - name: Evaluate Metrics and Generate Report
         run: |
-          # Initialize Metrics
-          build_success=0
-          artifact_creation=0
-          deployment_success=0
-          total_score=0
-
-          # Read Logs
-          log_file="workflow_logs.txt"
-          report_file="student_workflow_report.txt"
-
-          echo "Evaluating Metrics..."
-          
-          if grep -q "Successfully built" "$log_file"; then
-              build_success=30
-          fi
-
-          if grep -q "Upload Artifact" "$log_file" && grep -q "artifact uploaded" "$log_file"; then
-              artifact_creation=40
-          fi
-
-          if grep -q "docker run" "$log_file"; then
-              deployment_success=30
-          fi
-
-          total_score=$((build_success + artifact_creation + deployment_success))
-
-          # Generate Report
-          cat <<EOF > "$report_file"
-CI/CD Workflow Evaluation Report
-================================
-Build Success (%): $build_success
-Artifact Creation and Upload (%): $artifact_creation
-Deployment Success (%): $deployment_success
-
-Total Score (%): $total_score
-EOF
-          echo "Report generated successfully at $report_file."
-
-      - name: Upload Metrics Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: student-workflow-metrics-report
-          path: student_workflow_report.txt
+            # Initialize Metrics
+            build_success=0
+            artifact_creation=0
+            deployment_success=0
+            total_score=0
+  
+            # Read Logs
+            log_file="workflow_logs.txt"
+            report_file="student_workflow_report.txt"
+  
+            echo "Evaluating Metrics..."
+            
+            if grep -q "Successfully built" "$log_file"; then
+                build_success=30
+            fi
+  
+            if grep -q "Upload Artifact" "$log_file" && grep -q "artifact uploaded" "$log_file"; then
+                artifact_creation=40
+            fi
+  
+            if grep -q "docker run" "$log_file"; then
+                deployment_success=30
+            fi
+  
+            total_score=$((build_success + artifact_creation + deployment_success))
+  
+            # Generate Report
+            echo "CI/CD Workflow Evaluation Report" > "$report_file"
+            echo "================================" >> "$report_file"
+            echo "Build Success (%): $build_success" >> "$report_file"
+            echo "Artifact Creation and Upload (%): $artifact_creation" >> "$report_file"
+            echo "Deployment Success (%): $deployment_success" >> "$report_file"
+            echo "" >> "$report_file"
+            echo "Total Score (%): $total_score" >> "$report_file"
+            echo "Report generated successfully at $report_file."
+  
