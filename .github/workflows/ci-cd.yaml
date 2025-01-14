@@ -80,44 +80,59 @@ jobs:
 
       - name: Evaluate Metrics and Generate Report
         run: |
-            # Initialize Metrics
-            build_success=0
-            artifact_creation=0
-            deployment_success=0
-            total_score=0
+              # Initialize Metrics
+              build_success=0
+              artifact_created=0
+              artifact_uploaded=0
+              image_loaded=0
+              container_running=0
+              total_score=0
+    
+              # Read Logs
+              log_file="workflow_logs.txt"
+              report_file="yes.txt"
+    
+              echo "Evaluating Metrics..."
+    
+              # Check for successful image build
+              if grep -q "#10 DONE" "$log_file"; then
+                  build_success=20
+              fi
+    
+              # Check for artifact creation
+              if grep -q "Container for artifact \"docker-image\" successfully created" "$log_file"; then
+                  artifact_created=20
+              fi
+    
+              # Check for successful artifact upload
+              if grep -q "Artifact docker-image has been successfully uploaded!" "$log_file"; then
+                  artifact_uploaded=20
+              fi
+    
+              # Check for successful image loading
+              if grep -q "Loaded image: monyslim/test-image" "$log_file"; then
+                  image_loaded=20
+              fi
+    
+              # Check for successful container running
+              if docker ps | grep -q "monyslim/test-image"; then
+                container_running=20
+              fi
   
-            # Read Logs
-            log_file="workflow_logs.txt"
-            report_file="yes.txt"
+              total_score=$((build_success + artifact_created + artifact_uploaded + image_loaded + container_running))
+    
+              # Generate Report
+              echo "CI/CD Workflow Evaluation Report" > "$report_file"
+              echo "================================" >> "$report_file"
+              echo "Build Success (%): $build_success" >> "$report_file"
+              echo "Artifact Created (%): $artifact_created" >> "$report_file"
+              echo "Artifact Uploaded (%): $artifact_uploaded" >> "$report_file"
+              echo "Image Loaded (%): $image_loaded" >> "$report_file"
+              echo "Container Running (%): $container_running" >> "$report_file"
+              echo "" >> "$report_file"
+              echo "Total Score (%): $total_score" >> "$report_file"
+              echo "Report generated successfully at $report_file."
   
-            echo "Evaluating Metrics..."
-  
-            # Check for successful image build
-            if grep -q "#10 DONE" "$log_file"; then
-                build_success=30
-            fi
-  
-            # Check for successful artifact upload
-            if grep -q "Artifact docker-image has been successfully uploaded!" "$log_file"; then
-                artifact_creation=40
-            fi
-  
-            # Check for successful image loading and running
-            if grep -q "docker run" "$log_file" && grep -q "docker load -i" "$log_file"; then
-                deployment_success=30
-            fi
-  
-            total_score=$((build_success + artifact_creation + deployment_success))
-  
-            # Generate Report
-            echo "CI/CD Workflow Evaluation Report" > "$report_file"
-            echo "================================" >> "$report_file"
-            echo "Build Success (%): $build_success" >> "$report_file"
-            echo "Artifact Creation and Upload (%): $artifact_creation" >> "$report_file"
-            echo "Deployment Success (%): $deployment_success" >> "$report_file"
-            echo "" >> "$report_file"
-            echo "Total Score (%): $total_score" >> "$report_file"
-            echo "Report generated successfully at $report_file."
   
       - name: Upload Metrics Report
         uses: actions/upload-artifact@v3
